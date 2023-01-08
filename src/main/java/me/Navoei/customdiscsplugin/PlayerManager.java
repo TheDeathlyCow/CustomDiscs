@@ -1,5 +1,7 @@
 package me.Navoei.customdiscsplugin;
 
+import de.maxhenkel.voicechat.api.Position;
+import de.maxhenkel.voicechat.api.ServerLevel;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.audiochannel.AudioChannel;
 import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
@@ -39,6 +41,64 @@ public class PlayerManager {
         });
     }
 
+    @Nullable
+    public UUID playGoatHorn(VoicechatServerApi api, Path soundFilePath, Player bukkitPlayer) {
+        UUID channelID = UUID.randomUUID();
+
+        Location bukkitLocation = bukkitPlayer.getLocation();
+        ServerLevel serverLevel = api.fromServerLevel(bukkitPlayer.getWorld());
+        Position pos = api.createPosition(bukkitLocation.getX(), bukkitLocation.getY(), bukkitLocation.getZ());
+        float distance = CustomDiscs.getInstance().musicDiscDistance;
+        LocationalAudioChannel channel = api.createLocationalAudioChannel(
+                channelID,
+                serverLevel,
+                pos
+        );
+
+        if (channel == null) {
+            return null;
+        }
+
+        channel.setCategory(VoicePlugin.GOAT_HORN_CATEGORY);
+        channel.setDistance(distance);
+
+        AtomicBoolean stopped = new AtomicBoolean();
+        AtomicReference<de.maxhenkel.voicechat.api.audiochannel.AudioPlayer> player = new AtomicReference<>();
+
+        playerMap.put(channelID, () -> {
+            synchronized (stopped) {
+                stopped.set(true);
+                var audioPlayer = player.get();
+                if (audioPlayer != null) {
+                    audioPlayer.stopPlaying();
+                }
+            }
+        });
+
+        executorService.execute(() -> {
+            de.maxhenkel.voicechat.api.audiochannel.AudioPlayer audioPlayer = playChannel(api, bukkitPlayer, channel, bukkitPlayer.getLocation(), soundFilePath);
+
+            if (audioPlayer == null) {
+                playerMap.remove(channelID);
+                return;
+            }
+
+            audioPlayer.setOnStopped(() -> {
+                playerMap.remove(channelID);
+            });
+
+            synchronized (stopped) {
+                if (!stopped.get()) {
+                    player.set(audioPlayer);
+                } else {
+                    audioPlayer.stopPlaying();
+                }
+            }
+        });
+
+        return channelID;
+    }
+
     public void playLocationalAudio(VoicechatServerApi api, Path soundFilePath, Player bukkitPlayer, Block block) {
         UUID id = UUID.nameUUIDFromBytes(block.getLocation().toString().getBytes());
 
@@ -63,7 +123,7 @@ public class PlayerManager {
         });
 
         executorService.execute(() -> {
-            de.maxhenkel.voicechat.api.audiochannel.AudioPlayer audioPlayer = playChannel(api, bukkitPlayer, audioChannel, block, soundFilePath);
+            de.maxhenkel.voicechat.api.audiochannel.AudioPlayer audioPlayer = playChannel(api, bukkitPlayer, audioChannel, block.getLocation(), soundFilePath);
             if (audioPlayer == null) {
                 playerMap.remove(id);
                 return;
@@ -87,7 +147,7 @@ public class PlayerManager {
     }
 
     @Nullable
-    private de.maxhenkel.voicechat.api.audiochannel.AudioPlayer playChannel(VoicechatServerApi api, Player bukkitPlayer, AudioChannel audioChannel, Block block, Path soundFilePath) {
+    private de.maxhenkel.voicechat.api.audiochannel.AudioPlayer playChannel(VoicechatServerApi api, Player bukkitPlayer, AudioChannel audioChannel, Location location, Path soundFilePath) {
         try {
             short[] audio = readSoundFile(soundFilePath);
             AudioPlayer audioPlayer = api.createAudioPlayer(audioChannel, api.createEncoder(), audio);
@@ -95,7 +155,7 @@ public class PlayerManager {
             return audioPlayer;
         } catch (Exception e) {
             e.printStackTrace();
-            Bukkit.getLogger().info("Error Occurred At: " + block.getLocation());
+            Bukkit.getLogger().info("Error Occurred At: " + location);
             if (bukkitPlayer != null) {
                 bukkitPlayer.sendMessage(ChatColor.RED + "An error occurred while trying to play the music!");
             }
@@ -136,20 +196,20 @@ public class PlayerManager {
         }
 
         byte[] array = new byte[audioSamples.length];
-        for (int i = 0; i < array.length; i+=2) {
+        for (int i = 0; i < array.length; i += 2) {
             // convert byte pair to int
-            short buf1 = audioSamples[i+1];
+            short buf1 = audioSamples[i + 1];
             short buf2 = audioSamples[i];
 
             buf1 = (short) ((buf1 & 0xff) << 8);
             buf2 = (short) (buf2 & 0xff);
 
-            short res= (short) (buf1 | buf2);
+            short res = (short) (buf1 | buf2);
             res = (short) (res * volume);
 
             // convert back
             array[i] = (byte) res;
-            array[i+1] = (byte) (res >> 8);
+            array[i + 1] = (byte) (res >> 8);
 
         }
         return array;

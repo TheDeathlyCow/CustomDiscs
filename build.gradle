@@ -58,6 +58,6 @@ repositories {
 shadowJar {
     configurations = [project.configurations.shadow]
     classifier 'shadow-dev'
-    //relocate 'javazoom', "me.navoei.${mod_id}.javazoom"
+    relocate 'javazoom', "me.navoei.${mod_id}.javazoom"
     //relocate 'org.tritonus', "me.navoei.${mod_id}.tritonus"
 }
