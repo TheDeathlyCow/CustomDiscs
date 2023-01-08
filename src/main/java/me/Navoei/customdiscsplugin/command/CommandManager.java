@@ -2,11 +2,13 @@ package me.Navoei.customdiscsplugin.command;
 
 import me.Navoei.customdiscsplugin.command.SubCommands.ConvertCommand;
 import me.Navoei.customdiscsplugin.command.SubCommands.CreateCommand;
+import me.Navoei.customdiscsplugin.command.SubCommands.GoatHornCreateCommand;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Goat;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,6 +23,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
     public CommandManager() {
         subCommands.add(new CreateCommand());
         subCommands.add(new ConvertCommand());
+        subCommands.add(new GoatHornCreateCommand());
     }
 
     @Override

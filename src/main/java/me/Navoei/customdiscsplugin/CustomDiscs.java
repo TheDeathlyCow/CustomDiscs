@@ -10,6 +10,7 @@ import com.comphenix.protocol.events.PacketEvent;
 import de.maxhenkel.voicechat.api.BukkitVoicechatService;
 import me.Navoei.customdiscsplugin.command.CommandManager;
 import me.Navoei.customdiscsplugin.event.GoatHornEvents;
+import me.Navoei.customdiscsplugin.event.GoatHornPacketAdapter;
 import me.Navoei.customdiscsplugin.event.JukeBox;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -65,7 +66,7 @@ public final class CustomDiscs extends JavaPlugin {
         musicDiscVolume = Float.parseFloat(Objects.requireNonNull(getConfig().getString("music-disc-volume")));
 
         ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
-
+        protocolManager.addPacketListener(new GoatHornPacketAdapter(this, ListenerPriority.NORMAL));
         protocolManager.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Server.WORLD_EVENT) {
             @Override
             public void onPacketSending(PacketEvent event) {
@@ -83,6 +84,7 @@ public final class CustomDiscs extends JavaPlugin {
                 }
             }
         });
+
 
     }
 
